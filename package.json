@@ -12,6 +12,7 @@
     "@ai-sdk/react": "^3.0.207",
     "@aws-sdk/client-dynamodb": "^3.850.0",
     "@aws-sdk/lib-dynamodb": "^3.850.0",
+    "@aws-sdk/client-s3": "^3.850.0",
     "@base-ui/react": "^1.5.0",
     "@vercel/analytics": "1.6.1",
     "ai": "^6.0.205",
