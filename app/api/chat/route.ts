@@ -1,8 +1,8 @@
 import Groq from 'groq-sdk'
 import { NextResponse } from 'next/server'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
-import { S3Client, PutObjectCommand } from '@aws-sdk/s3-client'
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -13,6 +13,14 @@ const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
 }))
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+})
 
 type PersonaId = 'elder' | 'kid' | 'wanderer'
 
@@ -72,6 +80,27 @@ async function saveConversation(userId: string, userText: string, reply: string,
   }
 }
 
+async function saveToS3(userId: string, userText: string, reply: string, persona: PersonaId) {
+  try {
+    const key = `journeys/${userId}/${new Date().toISOString()}.json`
+    await s3.send(new PutObjectCommand({
+      Bucket: 'ikigai-journey',
+      Key: key,
+      Body: JSON.stringify({
+        userId,
+        timestamp: new Date().toISOString(),
+        userMessage: userText,
+        assistantReply: reply,
+        persona,
+        season: persona === 'elder' ? 'autumn' : persona === 'kid' ? 'spring' : 'summer',
+      }),
+      ContentType: 'application/json',
+    }))
+  } catch (err) {
+    console.error('S3 save error:', err)
+  }
+}
+
 export async function POST(req: Request) {
   const { messages, userId = 'anonymous' } = await req.json()
 
@@ -93,6 +122,7 @@ export async function POST(req: Request) {
     const reply = completion.choices[0]?.message?.content || 'I am here with you.'
 
     await saveConversation(userId, userText, reply, personaId)
+    await saveToS3(userId, userText, reply, personaId)
 
     return NextResponse.json({
       role: 'assistant',
