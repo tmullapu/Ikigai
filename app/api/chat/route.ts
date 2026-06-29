@@ -35,7 +35,7 @@ You are honest about uncertainty and enjoy looking at things from new angles.`,
 
 async function detectPersona(userText: string): Promise<PersonaId> {
   const classification = await groq.chat.completions.create({
-    model: 'llama3-8b-8192',
+    model: 'llama-3.3-70b-versatile',
     messages: [
       {
         role: 'system',
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
 
   try {
     const completion = await groq.chat.completions.create({
-      model: 'llama3-8b-8192',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: SYSTEM_PROMPTS[personaId] },
         { role: 'user', content: userText },
